@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "mbport.h": "c",
+        "mbrtu.h": "c",
+        "interrupt.h": "c"
+    }
+}
