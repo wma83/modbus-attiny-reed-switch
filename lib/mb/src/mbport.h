@@ -80,8 +80,6 @@ BOOL            xMBPortSerialGetByte( CHAR * pucByte );
 
 BOOL            xMBPortSerialPutByte( CHAR ucByte );
 
-BOOL            xMBPortSerialPutByteWait( CHAR ucByte );
-
 /* ----------------------- Timers functions ---------------------------------*/
 BOOL            xMBPortTimersInit( USHORT usTimeOut50us );
 

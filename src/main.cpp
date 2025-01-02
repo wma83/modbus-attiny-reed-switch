@@ -19,6 +19,7 @@
 /* ----------------------- AVR includes -------------------------------------*/
 #include "avr/io.h"
 #include "avr/interrupt.h"
+#include <util/delay.h>
 
 /* ----------------------- Modbus includes ----------------------------------*/
 #include "mb.h"
@@ -26,28 +27,77 @@
 
 /* ----------------------- Defines ------------------------------------------*/
 #define UART_BAUD_RATE 19200
+
 #define REG_INPUT_START 0x1000
 #define REG_INPUT_NREGS 4
 
+#define UPDATE_INTERVAL 15
+
 /* ----------------------- Static variables ---------------------------------*/
-static USHORT   usRegInputStart = REG_INPUT_START;
-static USHORT   usRegInputBuf[REG_INPUT_NREGS];
+static USHORT usRegInputStart = REG_INPUT_START;
+static USHORT usRegInputBuf[REG_INPUT_NREGS];
 
 /* ----------------------- Start implementation -----------------------------*/
+void configureRTC()
+{
+    while (RTC.STATUS > 0) { ; } // Wait for all register to be synchronized
+    
+    RTC.PER = UPDATE_INTERVAL;
+    RTC.CTRLA = RTC_PRESCALER_DIV32768_gc | RTC_RTCEN_bm; // Enable RTC with 1 second clock
+    RTC.INTCTRL = RTC_OVF_bm; // Enable overflow interrupt
+}
+
 void setup()
 {
     eMBErrorCode    eStatus;
-    PORTA.DIR = 0;
-    
+        
     // set the usart0 to alternat ports in port mux
     PORTMUX.USARTROUTEA = PORTMUX_USART0_ALT1_gc | PORTMUX_USART1_NONE_gc;
-    PORTA.DIR |= PIN1_bm; // set output pin for TXD
+    
+    // configure port A
+    PORTA.DIR = 0;
 
+    configureRTC();
     eStatus = eMBInit( MB_RTU, 0x01, 0, UART_BAUD_RATE, MB_PAR_NONE );
     sei();
 
+    PORTA.DIR |= PIN1_bm; // set output pin for TXD
+    PORTA.DIR |= PIN4_bm; // set output pin for RS485 direction control
+    PORTA.DIR |= PIN3_bm; // set output for Chanel select so we can chain two boards
+
+    // configure port B
+    PORTB.DIR = 0x0F; // multiplexer s0-s2, and enable as output
+    PORTB.OUT = 0x08; // set the multiplexer enable to be disabled (active low)
+
     /* Enable the Modbus Protocol Stack. */
     eStatus = eMBEnable();
+    
+}
+
+void updateInputRegisters(){
+    cli();
+    uint16_t output1 = 0, output2 = 0, output3 = 0;
+    
+    PORTB.OUT = 0x00; // set the multiplexer enable to be enabled (active low)
+    for(uint8_t i = 0; i < 8; i++){
+        PORTB.OUT = i & 0x07;
+        _delay_us(5);
+
+        uint8_t mp1 = (PORTA.IN & PIN4_bm) ? 1 : 0;
+        uint8_t mp2 = (PORTA.IN & PIN5_bm) ? 1 : 0;
+        uint8_t mp3 = (PORTA.IN & PIN6_bm) ? 1 : 0;
+
+        output1 |= mp1 << i;
+        output2 |= mp2 << i;
+        output3 |= mp3 << i;
+    }
+    PORTB.OUT = 0x08; // set the multiplexer enable to be enabled (active low)
+
+    usRegInputBuf[1] = output1;
+    usRegInputBuf[2] = output2;
+    usRegInputBuf[3] = output3;
+
+    sei();
 }
 
 int main( void )
@@ -60,12 +110,9 @@ int main( void )
     {
         eStatus = eMBPoll();
 
-        /* Here we simply count the number of poll cycles. */
-        /* todo: read the value form sensors and set it to the usRegInputBuf*/
-        usRegInputBuf[0]++;
-        usRegInputBuf[1] = 1;
-        usRegInputBuf[2] = 2;
-        usRegInputBuf[3] = 3;
+        // for the modbus state maching to work correctly we need to
+        // have some delay between the calls to eMBPoll
+        _delay_us(10);
     }
 }
 
@@ -116,4 +163,13 @@ eMBErrorCode
 eMBRegDiscreteCB( UCHAR * pucRegBuffer, USHORT usAddress, USHORT usNDiscrete )
 {
     return MB_ENOREG;
+}
+
+/* ------------------------ Interupts handlers -----------------------------*/
+ISR(RTC_CNT_vect)
+{
+    RTC.INTFLAGS |= RTC_OVF_bm;
+    RTC.PER = UPDATE_INTERVAL;
+
+    updateInputRegisters();
 }
