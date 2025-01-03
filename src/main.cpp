@@ -52,9 +52,10 @@ void setup()
 {
     eMBErrorCode    eStatus;
         
-    // set the usart0 to alternat ports in port mux and enable rs485 mode
     PORTMUX.USARTROUTEA = PORTMUX_USART1_DEFAULT_gc | PORTMUX_USART0_NONE_gc;
+
 #if USE_RS485 > 0
+    // use RS485 mode
     MBUSART.CTRLA |= USART_RS485_bm;
     PORTA.DIR |= PIN4_bm; // set output pin for RS485 direction control
 #endif
