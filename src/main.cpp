@@ -32,6 +32,7 @@
 #define REG_INPUT_NREGS 4
 
 #define UPDATE_INTERVAL 15
+#define USE_RS485 1
 
 /* ----------------------- Static variables ---------------------------------*/
 static USHORT usRegInputStart = REG_INPUT_START;
@@ -51,8 +52,12 @@ void setup()
 {
     eMBErrorCode    eStatus;
         
-    // set the usart0 to alternat ports in port mux
-    PORTMUX.USARTROUTEA = PORTMUX_USART0_ALT1_gc | PORTMUX_USART1_NONE_gc;
+    // set the usart0 to alternat ports in port mux and enable rs485 mode
+    PORTMUX.USARTROUTEA = PORTMUX_USART1_DEFAULT_gc | PORTMUX_USART0_NONE_gc;
+#if USE_RS485 > 0
+    MBUSART.CTRLA |= USART_RS485_bm;
+    PORTA.DIR |= PIN4_bm; // set output pin for RS485 direction control
+#endif
     
     // configure port A
     PORTA.DIR = 0;
@@ -62,7 +67,6 @@ void setup()
     sei();
 
     PORTA.DIR |= PIN1_bm; // set output pin for TXD
-    PORTA.DIR |= PIN4_bm; // set output pin for RS485 direction control
     PORTA.DIR |= PIN3_bm; // set output for Chanel select so we can chain two boards
 
     // configure port B
@@ -75,7 +79,9 @@ void setup()
 }
 
 void updateInputRegisters(){
+
     cli();
+
     uint16_t output1 = 0, output2 = 0, output3 = 0;
     
     PORTB.OUT = 0x00; // set the multiplexer enable to be enabled (active low)
@@ -83,9 +89,9 @@ void updateInputRegisters(){
         PORTB.OUT = i & 0x07;
         _delay_us(5);
 
-        uint8_t mp1 = (PORTA.IN & PIN4_bm) ? 1 : 0;
-        uint8_t mp2 = (PORTA.IN & PIN5_bm) ? 1 : 0;
-        uint8_t mp3 = (PORTA.IN & PIN6_bm) ? 1 : 0;
+        uint8_t mp1 = (PORTA.IN & PIN5_bm) ? 1 : 0;
+        uint8_t mp2 = (PORTA.IN & PIN6_bm) ? 1 : 0;
+        uint8_t mp3 = (PORTA.IN & PIN7_bm) ? 1 : 0;
 
         output1 |= mp1 << i;
         output2 |= mp2 << i;

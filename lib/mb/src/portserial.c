@@ -38,26 +38,26 @@
 void
 vMBPortSerialEnable( BOOL xRxEnable, BOOL xTxEnable )
 {
-    USART0.CTRLB |= USART_TXEN_bm;
+    MBUSART.CTRLB |= USART_TXEN_bm;
 
     if( xRxEnable )  
     {
-        USART0.CTRLA |= USART_RXCIE_bm;
-        USART0.CTRLB |= USART_RXEN_bm;
+        MBUSART.CTRLA |= USART_RXCIE_bm;
+        MBUSART.CTRLB |= USART_RXEN_bm;
     }
     else
     {
-        USART0.CTRLA &= ~USART_RXCIE_bm;
-        USART0.CTRLB &= ~USART_RXEN_bm;
+        MBUSART.CTRLA &= ~USART_RXCIE_bm;
+        MBUSART.CTRLB &= ~USART_RXEN_bm;
     }
 
     if( xTxEnable )
     {
-        USART0.CTRLA |= USART_DREIE_bm;
+        MBUSART.CTRLA |= USART_DREIE_bm;
     }
     else
     {
-        USART0.CTRLA &= ~USART_DREIE_bm;
+        MBUSART.CTRLA &= ~USART_DREIE_bm;
     }
 }
 
@@ -68,28 +68,28 @@ xMBPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, eMBParity e
     /* prevent compiler warning. */
     (void)ucPORT;
 	
-    USART0.BAUD = UART_BAUD_CALC( ulBaudRate, 64 * F_CPU / MAIN_CLOCK_PRESCALER );
+    MBUSART.BAUD = UART_BAUD_CALC( ulBaudRate, 64 * F_CPU / MAIN_CLOCK_PRESCALER );
 
     switch ( eParity )
     {
         case MB_PAR_EVEN:
-            USART0.CTRLC |= USART_PMODE_EVEN_gc;
+            MBUSART.CTRLC |= USART_PMODE_EVEN_gc;
             break;
         case MB_PAR_ODD:
-            USART0.CTRLC |= USART_PMODE_ODD_gc;
+            MBUSART.CTRLC |= USART_PMODE_ODD_gc;
             break;
         case MB_PAR_NONE:
-             USART0.CTRLC |= USART_PMODE_DISABLED_gc;
+             MBUSART.CTRLC |= USART_PMODE_DISABLED_gc;
             break;
     }
 
     switch ( ucDataBits )
     {
         case 8:
-            USART0.CTRLC |= USART_CHSIZE_8BIT_gc;
+            MBUSART.CTRLC |= USART_CHSIZE_8BIT_gc;
             break;
         case 7:
-            USART0.CTRLC |= USART_CHSIZE_7BIT_gc;
+            MBUSART.CTRLC |= USART_CHSIZE_7BIT_gc;
             break;
     }
 
@@ -100,23 +100,23 @@ xMBPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, eMBParity e
 BOOL
 xMBPortSerialPutByte( CHAR ucByte )
 {
-    USART0.TXDATAL = ucByte;
+    MBUSART.TXDATAL = ucByte;
     return TRUE;
 }
 
 BOOL
 xMBPortSerialGetByte( CHAR * pucByte )
 {
-    *pucByte  = USART0.RXDATAL;
+    *pucByte  = MBUSART.RXDATAL;
     return TRUE;
 }
 
-ISR(USART0_DRE_vect)
+ISR(MBUSART_DRE_vect)
 {
     pxMBFrameCBTransmitterEmpty(  );
 }
 
-ISR( USART0_RXC_vect )
+ISR(MBUSART_RXC_vect)
 {
     pxMBFrameCBByteReceived(  );
 }

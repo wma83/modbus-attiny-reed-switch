@@ -61,4 +61,8 @@ typedef long    LONG;
 #define FALSE           0
 #endif
 
+#define MBUSART USART1
+#define MBUSART_DRE_vect USART1_DRE_vect
+#define MBUSART_RXC_vect USART1_RXC_vect
+
 #endif
